@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="fa">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>تولید فایل‌های اجرای سرور Magma</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Vazirmatn&display=swap');
+  body {
+    font-family: 'Vazirmatn', sans-serif;
+    background: linear-gradient(135deg, #1e3a8a, #2563eb);
+    color: white;
+    margin: 0; padding: 20px;
+    display: flex; justify-content: center; align-items: center;
+    min-height: 100vh;
+  }
+  .container {
+    background: #1e40afcc;
+    padding: 25px 30px;
+    border-radius: 15px;
+    width: 100%;
+    max-width: 420px;
+    box-shadow: 0 10px 30px rgba(59, 130, 246, 0.6);
+  }
+  h1 {
+    text-align: center;
+    margin-bottom: 25px;
+    font-weight: 700;
+  }
+  label {
+    display: block;
+    margin-bottom: 6px;
+    font-weight: 600;
+  }
+  input[type="number"] {
+    width: calc(100% - 60px);
+    padding: 10px;
+    border-radius: 8px;
+    border: none;
+    font-size: 17px;
+    margin-bottom: 15px;
+    color: #0f172a;
+  }
+  select {
+    width: 50px;
+    padding: 10px;
+    border-radius: 8px;
+    border: none;
+    font-weight: 700;
+    font-size: 17px;
+    margin-left: 10px;
+    background: #3b82f6;
+    color: white;
+    cursor: pointer;
+  }
+  .input-row {
+    display: flex;
+    align-items: center;
+    margin-bottom: 20px;
+  }
+  button {
+    width: 100%;
+    padding: 14px;
+    background: #3b82f6;
+    border: none;
+    border-radius: 12px;
+    font-size: 18px;
+    font-weight: 700;
+    color: white;
+    cursor: pointer;
+    transition: background 0.3s ease;
+  }
+  button:hover {
+    background: #60a5fa;
+  }
+  .files {
+    margin-top: 25px;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+  }
+  .file-block {
+    background: #2563ebcc;
+    padding: 15px 20px;
+    border-radius: 12px;
+    word-break: break-all;
+    font-family: monospace;
+    font-size: 15px;
+    white-space: pre-wrap;
+    color: #dbeafe;
+  }
+  @media (max-width: 480px) {
+    .container {
+      padding: 20px 20px;
+      max-width: 100%;
+    }
+    input[type="number"] {
+      width: 100%;
+      margin-bottom: 10px;
+    }
+    .input-row {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+    select {
+      margin-left: 0;
+      margin-bottom: 15px;
+      width: 100%;
+    }
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <h1>تولید فایل اجرای سرور Magma</h1>
+  
+  <label for="ramValue">مقدار رم</label>
+  <div class="input-row">
+    <input type="number" id="ramValue" min="1" max="32768" value="4" />
+    <select id="ramUnit" title="واحد رم">
+      <option value="G">گیگابایت (G)</option>
+      <option value="M">مگابایت (M)</option>
+    </select>
+  </div>
+  
+  <button id="generateBtn">تولید و نمایش فایل‌ها</button>
+  
+  <div class="files" id="filesContainer" style="display:none;">
+    
+    <div>
+      <label>محتوای ram-config.txt</label>
+      <pre class="file-block" id="ramConfigContent"></pre>
+      <button onclick="downloadFile('ram-config.txt', ramConfigContent.textContent)">دانلود ram-config.txt</button>
+    </div>
+    
+    <div>
+      <label>محتوای start.sh</label>
+      <pre class="file-block" id="startShContent"></pre>
+      <button onclick="downloadFile('start.sh', startShContent.textContent)">دانلود start.sh</button>
+    </div>
+    
+  </div>
+</div>
+
+<script>
+  const ramValueInput = document.getElementById('ramValue');
+  const ramUnitSelect = document.getElementById('ramUnit');
+  const generateBtn = document.getElementById('generateBtn');
+  const filesContainer = document.getElementById('filesContainer');
+  const ramConfigContent = document.getElementById('ramConfigContent');
+  const startShContent = document.getElementById('startShContent');
+
+  function generateFiles() {
+    let ramValue = parseInt(ramValueInput.value);
+    if (isNaN(ramValue) || ramValue < 1) {
+      alert('لطفاً مقدار رم معتبر وارد کنید');
+      return;
+    }
+    let ramUnit = ramUnitSelect.value; // G یا M
+    
+    // مقدار رم به شکل صحیح برای ram-config.txt
+    let ramString = ramValue + ramUnit;
+    
+    // محتویات فایل ram-config.txt
+    let ramConfigText = ramString + "\n";
+    
+    // محتویات فایل start.sh
+    let startShText = `#!/bin/bash
+# خواندن رم از فایل ram-config.txt
+if [ -f ram-config.txt ]; then
+  RAM=$(cat ram-config.txt)
+else
+  RAM="4G" # مقدار پیش فرض
+fi
+
+echo "در حال اجرای سرور با رم $RAM ..."
+
+java -Xmx$RAM -Xms$RAM -jar magma-1.20.1.jar nogui
+pause
+`;
+    
+    ramConfigContent.textContent = ramConfigText;
+    startShContent.textContent = startShText;
+    
+    filesContainer.style.display = 'block';
+  }
+
+  function downloadFile(filename, content) {
+    const element = document.createElement('a');
+    const file = new Blob([content], {type: 'text/plain'});
+    element.href = URL.createObjectURL(file);
+    element.download = filename;
+    document.body.appendChild(element);
+    element.click();
+    setTimeout(() => {
+      document.body.removeChild(element);
+      URL.revokeObjectURL(element.href);
+    }, 0);
+  }
+
+  generateBtn.addEventListener('click', generateFiles);
+</script>
+
+</body>
+</html>
